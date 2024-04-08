@@ -1,0 +1,35 @@
+SELECT 
+    sdg.SDG_ID,
+    sdg.name,
+    sdu.u_patholab_number,
+    (SELECT log3.APPLICATION_CODE 
+     FROM sdg_log log3 
+     WHERE log3.SDG_ID = sdg.SDG_ID 
+     ORDER BY log3.TIME DESC 
+     FETCH FIRST 1 ROWS ONLY
+    ) as last_application_code,
+    op.full_name as patholog_name,
+    pe.phrase_description as INFO,
+     TO_DATE(TO_CHAR(cu.u_received_on), 'DD/MM/YY') AS received_on,
+    pe.PHRASE_INFO as entity,
+    LIMS.phrase_lookup('Priority', sdu.u_priority) PRIORITY,
+    p.NAME as part
+FROM 
+    sdg_user sdu
+    JOIN sdg ON sdg.SDG_ID = sdu.SDG_ID
+    join u_order_user ou on ou.U_ORDER_ID = sdu.U_ORDER_ID
+    join U_PARTS_user pu  on pu.U_PARTS_ID = ou.U_PARTS_ID
+    join U_PARTS p on pu.U_PARTS_ID = p.U_PARTS_ID 
+    JOIN phrase_entry pe ON pe.phrase_id = 241 
+        AND pe.PHRASE_NAME = (SELECT log5.APPLICATION_CODE 
+                              FROM sdg_log log5 
+                              WHERE log5.SDG_ID = sdg.SDG_ID 
+                              ORDER BY log5.TIME DESC 
+                              FETCH FIRST 1 ROWS ONLY
+                             )
+   LEFT JOIN operator op ON sdu.U_PATHOLOG = op.OPERATOR_ID
+   LEFT JOIN u_container_user cu ON cu.u_container_id = sdu.u_container_id
+WHERE 
+    sdg.name LIKE 'C%'
+    and sdg.status in('P','C','V','I')
+    order by sdg_id desc

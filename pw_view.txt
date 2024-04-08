@@ -1,0 +1,289 @@
+SELECT  D.SDG_ID, rownum as row_num, 
+  (
+  CASE
+    WHEN remarks IS NOT NULL
+    THEN 'T'
+    ELSE 'F'
+  END) has_remarks,
+  (
+  CASE
+    WHEN (SELECT LIMS.OTHER_SDG_FOR_PATIENT (d.sdg_id) multiple FROM dual) IS NOT NULL
+    THEN 'T'
+    ELSE 'F'
+  END) has_multiple,
+  (
+  CASE
+    WHEN du.u_week_nbr = '707'
+    THEN 'T'
+    ELSE 'F'
+  END) has_second_inspection,
+ 
+  (
+  CASE
+    WHEN rescan IS NOT NULL
+    THEN 'T'
+    ELSE 'F'
+  END) has_rescan,
+  (
+  CASE
+    WHEN finish_rescan IS NOT NULL
+    THEN 'T'
+    ELSE 'F'
+  END) has_finish_rescan,
+     (
+  CASE
+    WHEN extra_material IS NOT NULL
+    THEN 'T'
+    ELSE 'F'
+  END) has_extra_material,
+  (
+  CASE
+    WHEN finish_extra_material IS NOT NULL
+    THEN 'T'
+    ELSE 'F'
+  END) has_finish_extra_material,  
+          (
+  CASE
+    WHEN   exist_colors IS NOT NULL
+    THEN 'T'
+    ELSE 'F'
+  END) has_colors,
+      (
+  CASE
+    WHEN finish_colors IS NOT NULL
+    THEN 'T'
+    ELSE 'F'
+  END) has_finish_colors,
+    (
+  CASE
+    WHEN finish_advise IS NOT NULL
+    THEN 'T'
+    ELSE 'F'
+  END) has_finish_advise,
+  du.u_priority  ,LIMS.phrase_lookup('Priority',du.u_priority) prio_txt,CL.name ptient_name,d.name sdgName,d.status sdgstatus,
+  cu.u_send_on,du.u_patholog,patholog_full_name,patholog_name,is_digital,
+  du.u_patholab_number,du.u_is_last_update revision,
+
+  (
+  CASE
+    WHEN advisor IS NOT NULL
+    THEN 'T'
+    ELSE 'F'
+  END) is_advisor,
+  advisorOperator,
+  remarksRequests,
+  (SELECT r.formatted_result AS clinicalDiagnosis
+  FROM sample s,
+    aliquot a,
+    test t,
+    result r
+  WHERE d.sdg_id    = s.sdg_id
+  AND s.sample_id   = a.sample_id
+  AND a.aliquot_id  = t.aliquot_id
+  AND t.test_id     = r.test_id
+  AND LOWER(r.name) = 'diagnosis'
+  ) diagnosis,
+  (SELECT LISTAGG ( su.u_organ , ',') WITHIN GROUP(
+  ORDER BY su.u_organ) organs
+  FROM sample s,
+    sample_user su
+  WHERE d.sdg_id  = s.sdg_id
+  AND s.sample_id = su.sample_id
+  AND su.u_organ IS NOT NULL
+  ) organs,
+  (SELECT COUNT(*)
+  FROM sample s,
+    aliquot a,
+    aliquot_user au
+  WHERE s.sdg_id      = d.sdg_id
+  AND s.sample_id     = a.sample_id
+  AND a.aliquot_id    = au.aliquot_id
+  AND au.u_glass_type = 'B'
+  AND a.status       <> 'X'
+  ) num_of_blocks,
+  (SELECT COUNT(*)
+  FROM sample s,
+    aliquot a,
+    aliquot_user au
+  WHERE s.sdg_id       = d.sdg_id
+  AND s.sample_id      = a.sample_id
+  AND a.aliquot_id     = au.aliquot_id
+  AND au.u_glass_type  = 'S'
+  AND au.u_color_type IS NOT NULL
+  AND a.status        <> 'X'
+  ) num_of_colors,
+    (SELECT 
+    CASE
+    WHEN COUNT(*) >0
+    THEN 'T'
+    ELSE 'F'
+  END
+  FROM sample s,
+    aliquot a,
+    aliquot_user au
+  WHERE s.sdg_id       = d.sdg_id
+  AND s.sample_id      = a.sample_id
+  AND a.aliquot_id     = au.aliquot_id
+  AND au.u_glass_type  = 'S'
+  AND au.u_scanned='T'
+  AND a.status        <> 'X'
+  )has_Slides_Scaned,
+  (SELECT max(au.u_scanned_on)
+  FROM sample s,
+    aliquot a,
+    aliquot_user au
+  WHERE s.sdg_id       = d.sdg_id
+  AND s.sample_id      = a.sample_id
+  AND a.aliquot_id     = au.aliquot_id
+  AND au.u_glass_type  = 'S'
+  AND au.u_scanned='T'
+  AND a.status        <> 'X'
+  )Scanned_on,
+  
+  --AE CODE (unscanned_slides_number
+(SELECT 
+    COUNT(*) AS unscanned_slides_number
+FROM ALIQUOT_USER AU
+JOIN ALIQUOT A ON AU.ALIQUOT_ID = A.ALIQUOT_ID
+JOIN SAMPLE S ON S.SAMPLE_ID = A.SAMPLE_ID
+WHERE S.SDG_ID = d.SDG_ID 
+AND AU.U_GLASS_TYPE = 'S' 
+AND (AU.U_SCANNED IS NULL OR AU.U_SCANNED = 'F') 
+AND A.STATUS <> 'X') unscanned_slides_number,
+
+--AE CODE (scanned reference)
+(SELECT 
+    CASE 
+        WHEN (SELECT COUNT(*) 
+              FROM U_SDG_ATTACHMENT_USER 
+              WHERE U_SDG_ID = d.SDG_ID) > 0 
+        THEN 'T'
+        ELSE 'F'
+    END AS has_attached_docs
+FROM dual) has_attached_docs,
+                    
+(select count(*) from ALIQUOt a 
+        JOIN ALIQUOT_USER AU on AU.ALIQUOT_ID = a.ALIQUOT_ID
+        JOIN SAMPLE S ON S.SAMPLE_ID = A.SAMPLE_ID
+         where  S.SDG_ID = d.sdg_id and AU.U_GLASS_TYPE = 'B' and  (select count(*)  from ALIQUOT_FORMULATION AF where af.PARENT_ALIQUOT_ID=a.ALIQUOT_ID)=0) 
+       empty_blocks_number,
+  
+  (SELECT LISTAGG ( au.u_color_type , ',') WITHIN GROUP(
+  ORDER BY au.u_color_type)
+  FROM sample s,
+    aliquot a,
+    aliquot_user au
+  WHERE s.sdg_id       = d.sdg_id
+  AND s.sample_id      = a.sample_id
+  AND a.aliquot_id     = au.aliquot_id
+  AND au.u_glass_type  = 'S'
+  AND au.u_color_type IS NOT NULL
+  AND a.status        <> 'X'
+  ) colors,
+  du.u_week_nbr,
+    (SELECT 1
+  FROM sample s,
+    aliquot a,
+    aliquot_user au
+  WHERE d.sdg_id    = s.sdg_id
+  AND s.sample_id   = a.sample_id
+  AND a.aliquot_id   = au.aliquot_id
+    AND a.status<>'X'
+and au.u_glass_type='S'
+and rownum=1 ) u_glass_type,
+du.U_PDF_PATH 
+FROM sdg d
+INNER JOIN sdg_user du
+ON d.sdg_id = du.sdg_id
+INNER JOIN u_order_user ou
+ON du.u_order_id = ou.u_order_id
+INNER JOIN CLIENT cl
+ON DU.U_PATIENT = CL.CLIENT_ID
+INNER JOIN u_customer c
+ON ou.u_customer = c.u_customer_id
+LEFT JOIN u_container_user cu
+ON cu.u_container_id = du.u_container_id
+
+LEFT JOIN
+  (SELECT SUBSTR(erdu.u_slide_name,0,10) AS advisor,
+  listagg(erdu.u_request_details) WITHIN GROUP 
+  (ORDER BY SUBSTR(erdu.u_slide_name,0,10)) As advisorOperator,
+  LISTAGG(erdu.u_remarks, '; ') WITHIN GROUP 
+  (ORDER BY SUBSTR(erdu.u_slide_name,0,10)) As remarksRequests
+  FROM u_extra_request_data_user erdu
+  WHERE erdu.u_status        = 'V'
+  AND erdu.u_req_type = 'T'
+  AND erdu.u_slide_name IS NOT NULL
+  group by SUBSTR(erdu.u_slide_name,0,10)) ON d.name IN advisor
+LEFT JOIN
+  (SELECT name AS remarks FROM u_request_remark
+  )
+ON d.name IN remarks
+LEFT JOIN
+  (SELECT DISTINCT(SUBSTR(erdu.u_slide_name,0,10)) AS rescan
+  FROM u_extra_request_data_user erdu
+  WHERE erdu.u_status        = 'V'
+  AND (erdu.u_req_type = 'R' or erdu.u_req_type = 'M' or erdu.u_req_type = 'S')
+  AND erdu.u_slide_name IS NOT NULL
+  ) ON d.name IN rescan
+LEFT JOIN
+  (SELECT DISTINCT(SUBSTR(erdu.u_slide_name,0,10)) AS finish_rescan
+  FROM u_extra_request_data_user erdu
+  WHERE erdu.u_status        = 'X'
+  AND (erdu.u_req_type = 'M'
+  OR erdu.u_req_type = 'S' OR erdu.u_req_type = 'R')
+  AND erdu.u_slide_name              IS NOT NULL
+  ) ON d.name                        IN finish_rescan
+    LEFT JOIN
+  (SELECT DISTINCT(SUBSTR(erdu.u_slide_name,0,10)) AS extra_material
+  FROM u_extra_request_data_user erdu
+  WHERE erdu.u_status        = 'V'
+  AND erdu.u_req_type = 'M'
+  AND erdu.u_slide_name IS NOT NULL
+  ) ON d.name IN extra_material
+LEFT JOIN
+  (SELECT DISTINCT(SUBSTR(erdu.u_slide_name,0,10)) AS finish_extra_material
+  FROM u_extra_request_data_user erdu
+  WHERE erdu.u_status        ='L'
+  AND erdu.u_req_type = 'M'
+  AND erdu.u_slide_name              IS NOT NULL
+  ) ON d.name                        IN finish_extra_material
+      LEFT JOIN
+  (SELECT DISTINCT(SUBSTR(erdu.u_slide_name,0,10)) AS exist_colors
+  FROM u_extra_request_data_user erdu
+  WHERE erdu.u_status        in( 'V','I')
+  AND erdu.u_slide_name IS NOT NULL
+  AND erdu.u_req_type in( 'H','I','O')
+  ) ON d.name  IN exist_colors
+  LEFT JOIN
+  (SELECT DISTINCT(SUBSTR(erdu.u_slide_name,0,10)) AS finish_colors
+  FROM u_extra_request_data_user erdu
+  WHERE erdu.u_status        in( 'P','L')
+  AND erdu.u_slide_name IS NOT NULL
+  AND erdu.u_req_type in( 'H','I','O')
+  ) ON d.name  IN finish_colors
+  LEFT JOIN
+(SELECT DISTINCT(SUBSTR(erdu.u_slide_name,0,10)) AS finish_advise
+  FROM u_extra_request_data_user erdu
+  WHERE erdu.u_status      in ('X','L','C')
+  AND erdu.u_slide_name IS NOT NULL
+  AND erdu.u_req_type = 'T'
+  ) ON d.name  IN finish_advise
+LEFT JOIN
+(SELECT o.operator_id operator_id,o.full_name patholog_full_name, o.name patholog_name ,ou.U_IS_DIGITAL_PATHOLOG is_digital FROM OPERATOR o inner join operator_user ou on ou.operator_id = o.operator_id)
+on operator_id = du.u_patholog  
+WHERE SUBSTR(d.name,0,1)              = 'B'
+AND d.status                         IN ('P','C','I') --ashi remove status 'V' on  13/11/2023
+--AND du.u_patholog                    IS NOT NULL ashi remove 13/11/2023
+AND SUBSTR(du.u_patholab_number,0,2) <> 'aa'
+and (   c.u_customer_id not  in (171,172)   or (  c.u_customer_id   in (171,172)   and cu.u_send_on >= to_date ('2023-11-01','yyyy-mm-dd') ))
+and d.created_on >sysdate  -1000
+--Revision
+  and (du.U_IS_LAST_UPDATE is null or DU.u_patholab_number in
+(
+select substr(u_patholab_number,1,10) from sdg_user sdr1
+where sdr1.U_REVISION_CAUSE in (30,52,55,57) and  sdr1.sdg_id = (
+select max(sdr2.sdg_id) from sdg_user sdr2 ,sdg sd2
+  where sd2.SDG_ID=sdr2.sdg_id and  sd2.external_reference  =d.external_reference
+  and sdr2.U_IS_LAST_UPDATE='F')
+  ))

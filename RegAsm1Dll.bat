@@ -1,0 +1,1 @@
+%SystemRoot%\Microsoft.NET\Framework\v4.0.30319\regasm.exe C:\PatholabProjects\ControlPanel\ControlPanel-CS\TestProject\bin\Debug\cONTROLpANELcs.dll

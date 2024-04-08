@@ -1,0 +1,50 @@
+    private void button3_Click(object sender, EventArgs e)
+    {
+        DOMDocument objDom = new DOMDocument();
+
+        //Creates lims request element
+
+        var objLimsElem = objDom.createElement("lims-request");
+
+        objDom.appendChild(objLimsElem);
+
+
+        // Creates login request element
+
+        var objLoginElem = objDom.createElement("login-request");
+
+        objLimsElem.appendChild(objLoginElem);
+
+
+
+        // Creates Entity element
+
+        var objEntityElem = objDom.createElement("SAMPLE");
+
+        objLoginElem.appendChild(objEntityElem);
+
+
+        var objCBW = objDom.createElement("create-by-workflow");
+
+        objEntityElem.appendChild(objCBW);
+
+        var objWN = objDom.createElement("workflow-name");
+
+        objWN.text = "New Sample Workflow";
+        objCBW.appendChild(objWN);
+
+
+        objDom.save("c:\\temp\\BB.xml");
+
+        DOMDocument RES = new DOMDocument();
+
+
+        var res = _processXml.ProcessXMLWithResponse(objDom, RES);
+
+        RES.save("c:\\temp\\BB_res.xml");
+
+        MessageBox.Show(RES.getElementsByTagName("NAME").ToString());
+
+
+    }
+}

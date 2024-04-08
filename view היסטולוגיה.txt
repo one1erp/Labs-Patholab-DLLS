@@ -1,0 +1,29 @@
+SELECT DISTINCT
+  sdg.SDG_ID,
+  au.U_BASKET,
+  a.NAME AS aliq_name,
+  a.STATUS,
+  au.U_ALIQUOT_STATION,
+  (SELECT MIN(log.TIME) FROM sdg_log log WHERE log.SDG_ID = sdg.SDG_ID AND log.APPLICATION_CODE = 'MB.UPD') AS macro_date,
+  au.U_LAST_LABORANT,
+  au.aliquot_id aliquot_id, 
+  op.full_name as laborant_name,
+  TO_DATE(TO_CHAR(cu.u_received_on), 'DD/MM/YY') AS received_on,
+  CASE WHEN au.U_ALIQUOT_STATION = 35 THEN 'לפני שיקוע' ELSE NULL END AS ALIQ_STATUS,
+  pe.phrase_description as basket_desc
+FROM
+  aliquot_user au
+  JOIN aliquot a ON au.ALIQUOT_ID = a.ALIQUOT_ID
+  JOIN SAMPLE_USER su ON a.SAMPLE_ID = su.SAMPLE_ID
+  JOIN sample s ON s.SAMPLE_ID = su.SAMPLE_ID
+  JOIN sdg_user sdu ON s.SDG_ID = sdu.SDG_ID
+  INNER JOIN u_container_user cu ON cu.u_container_id = sdu.u_container_id
+  JOIN sdg ON sdg.SDG_ID = sdu.SDG_ID
+  LEFT JOIN sdg_log log ON log.SDG_ID = sdg.SDG_ID
+  left join operator op on au.U_LAST_LABORANT = op.OPERATOR_ID
+  join phrase_entry pe on pe.phrase_id = 482 and pe.order_number = au.U_BASKET
+WHERE
+  au.U_GLASS_TYPE = 'B'
+  AND au.U_ALIQUOT_STATION = 35
+  AND a.NAME LIKE 'B%'
+and EXTRACT(MONTH FROM u_received_on) = 5 AND EXTRACT(YEAR FROM u_received_on) = 2019 AND EXTRACT(DAY FROM u_received_on) = 28

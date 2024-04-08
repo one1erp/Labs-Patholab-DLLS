@@ -1,0 +1,22 @@
+create or replace FUNCTION GET_CYTO_SLIDE_NAME( aliq_id in NUMBER) 
+RETURN   VARCHAR2 AS 
+
+AliquotPatholabNbr VARCHAR2  (50) ;
+sdgpathoname Varchar2 (50) := 'dddd/dd';
+aliqname varchar2 (50) :='aaaa/aa';
+
+BEGIN
+ 
+ 
+ SELECT a.name   ||'.'  || COUNT(1)   INTO aliqname
+    FROM lims.Aliquot_Formulation afc,
+       lims.Aliquot_Formulation afp,
+    lims.Aliquot  a
+    WHERE Afp.Parent_Aliquot_Id=Afc.Parent_Aliquot_Id
+    AND A.Aliquot_Id=afp.Parent_Aliquot_Id
+    AND afc.CHILD_ALIQUOT_ID   =aliq_id
+    GROUP BY a.name;
+    
+  RETURN aliqname;
+
+END GET_CYTO_SLIDE_NAME;

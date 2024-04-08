@@ -1,0 +1,38 @@
+.OPTION EXPLICIT
+.Set Cabinet=off
+.Set Compress=off
+.Set MaxDiskSize=CDROM
+.Set ReservePerCabinetSize=6144
+.Set DiskDirectoryTemplate=".."
+.Set CompressionType=MSZIP
+.Set CompressionLevel=7
+.Set CompressionMemory=21
+.Set CabinetNameTemplate="MacroHis.CAB"
+"Setup.Lst"
+"setup.exe"
+.Set Cabinet=on
+.Set Compress=on
+"MacroHis.ocx"
+"msvbvm60.dll"
+"OLEAUT32.DLL"
+"OLEPRO32.DLL"
+"ASYCFILT.DLL"
+"STDOLE2.TLB"
+"COMCAT.DLL"
+"msado27.tlb"
+"MSSTDFMT.DLL"
+"scrrun.dll"
+"MSVCRT.DLL"
+"msxml.dll"
+"SdgLog.dll"
+"MacabiShared.ocx"
+"richtx32.ocx"
+"RICHED32.DLL"
+"RequestRemark.ocx"
+"FM20.DLL"
+"DataMatrixAx.dll"
+"Organ.ocx"
+"SETUP1.EXE"
+"VB6STKIT.DLL"
+"ST6UNST.EXE"
+"msstkprp.dll"
